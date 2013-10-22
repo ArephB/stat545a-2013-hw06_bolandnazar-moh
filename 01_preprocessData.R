@@ -1,6 +1,10 @@
 
-
 # READING DATA AND CLEANNING
+
+
+## We need these two libraries for this script
+library(ggplot2)
+library(plyr)
 
 
 path  <- "LFSDATA/"
