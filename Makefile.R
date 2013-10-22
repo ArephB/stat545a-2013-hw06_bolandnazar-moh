@@ -5,9 +5,10 @@
 
 
 
+
 ## clean out any previous work
-outputs <- c("lfsdat.csv",            # 01_filterReorder.R
-             "WageTrendRegression.csv",  # 02_aggregatePlot.R
+outputs <- c("lfsdat.csv",               # the clean data
+             "WageTrendRegression.csv",  # The Table built from the second script 
              list.files(pattern = "*.png$"))
 file.remove(outputs)
 
