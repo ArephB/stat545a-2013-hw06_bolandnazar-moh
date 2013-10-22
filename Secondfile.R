@@ -1,10 +1,14 @@
 
 
 
+
+## This is the main file for data analysis and making plots and tables
+
+
+
 ## Loading the clean data
 
-path  <- "F:/stat545/stat545a-2013-hw06_bolandnazar-moh/lfsdat.csv"
-lfsdat <- read.csv(file=path)
+lfsdat <- read.csv("lfsdat.csv")
 
 ## Loading Libraries
 
@@ -199,6 +203,8 @@ q <- ggplot(lfstemp,aes(x=Province, fill= Union)) +
         ggtitle(" Union Members in different Provinces")+
         coord_flip()  ## makes a horizontal barchart 
 ggsave("UnionMembersProvinces.png")
+
+
 
 
 
