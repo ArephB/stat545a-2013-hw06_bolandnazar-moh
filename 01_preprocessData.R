@@ -1,246 +1,62 @@
 
 
+# READING DATA AND CLEANNING
 
 
-
-## This is the main file for data analysis and making plots and tables
-
-
-
-## Loading the clean data
-
-lfsdat <- read.csv("lfsdat.csv")
-
-## Loading Libraries
-
-library(ggplot2)
-library(xtable)
-library(lattice)
-library(plyr)
-library(mgcv)       # for using "gam" in geom_smooth(...)   
+path  <- "LFSDATA/"
+filenames <- list.files(path)    # this reads all the data files titled: 1997..2013
 
 
-
-## Workers in different Jobs
-
-## NOTE : The first line which we will use again and again, actually ignores those Non Available
-## observations in the variables that we are currently work/concentrate on. 
-## for example here we want to talk about JobTypes. In order to be convinient
-## we force R only work on available data in this part of program
-
-lfstemp<- lfsdat[!is.na(lfsdat$JobType),]
-lfstemp<- within( lfstemp, JobType <- reorder(JobType, Sex, length, order=TRUE)) # Reorder based on increasing count of each JobType
-
-## NOTE: lftemp is a temporary data frame with a reordered and NA-cleared attributes for
-## a temporary use in this part
-
-q <- ggplot(lfstemp, aes(x = JobType, fill= Sex)) +
-        geom_bar(position = "dodge")+
-        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-        ggtitle("Workers in different Jobs")
-ggsave("WorkersInJobs.png")
-
-## angle = 45 gives nicer labels on x axis (to avoid overlapping labels)
-
-
-
-
-
-## Reason of Being Absent from the Main Job
-## lftemp is a temporary data frame with a reordered and NA-cleared attributes for
-## a temporary use in this part
-lfstemp <- lfsdat[!is.na(lfsdat$JobAbsence), ]
-lfstemp <- within( lfstemp, JobAbsence <- reorder( JobAbsence, Sex, length, order = TRUE))
-
-q <- ggplot(lfstemp,aes(x=JobAbsence, fill= Sex)) +
-       geom_bar(position = "dodge")+
-       theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-       ggtitle("Reason of Being Absent from the Main Job")
-ggsave("ReasonOfJobAbsence.png")
-
-## angle = 45 gives nicer labels on x axis (to avoid overlapping labels)
-
-
-
-
-
-## Distribution of Wage in Different Provinces
-
-lfstemp<- within(lfsdat[!is.na(lfsdat$HourlyEarn),], +
-               Province <- reorder(Province, HourlyEarn, min, order=TRUE))  ## reorder provinces based on the minimum of wages 
-
-q <- ggplot(lfstemp[!is.na(lfstemp$HourlyEarn),], aes(x = HourlyEarn, color = Province)) +
-       geom_density(lwd = 1)+
-       ggtitle("Distribution of Wage in Different Provinces")
-ggsave("WageInProvinces.png")
-
-
-
-
-
-
-## Boxplot of Hourly Wage over Time
-
-q <- ggplot(lfsdat[!is.na(lfsdat$HourlyEarn),], aes(x = as.factor(Year), y= HourlyEarn)) +
-        geom_boxplot(lwd = 1, trim= TRUE)+
-        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-        ggtitle("Hourly Wage over Time") + xlab("Year") 
-ggsave("WageOverYear.png")
-
-
-
-
-
-## Regression of Median Hourly Wage with respect to year (adjusted to zero at 1997)
-## Summarize the results in a table
-
-lfstemp <- lfsdat[!is.na(lfsdat$HourlyEarn),]   ## get rid of NA cells
-
-MedWage <- ddply( lfstemp , ~Province + Year, summarize, MedianWage = median( HourlyEarn))
-names(MedWage) <- c("Province", "Year", "MedWage")   ## giving proper names
-yearMin <- 1997  ## to let it make more sense
-
-RegWageYear <- function(x) {      ## This function finds the regression parameters  
-  RegCoefs <- coef(lm(MedWage ~ I(Year - yearMin), x))
-  names(RegCoefs) <- c("intercept", "slope")
-  return(RegCoefs)
+## A function for sampling from data files - 
+## For argument x which is a file, picks 1000 entities, fairly randomly 
+jFun <- function( x) {
+    BIGDAT  <- read.csv( x,  na.strings = "")       #Resolves the empty cells with NA
+    BIGDAT <- subset(BIGDAT, BIGDAT$FWEIGHT>500)    #ignores the less frequent entities 
+    Edat <- BIGDAT[sample(nrow(BIGDAT), 1000, replace = FALSE, prob = NULL),]  # Sample 1000 rows out of current file
+    fDat <- subset(Edat, select= c(SURVYEAR, PROV, AGE_12, SEX, MARSTAT, EDUC90,  NAICS_18, YABSENT,FTPTMAIN,UHRSMAIN,TENURE,HRLYEARN,UNION, FWEIGHT))  ## Selects some of the columns
+    return(fDat)
 }
-WageTrend <- ddply(MedWage, ~Province, RegWageYear)  ## Construct the data frame
-WageTrendTable <- xtable(WageTrend)
-print(WageTrendTable, type = "html", include.rownames = FALSE)
-write.table(WageTrend, "WageTrendRegression.csv", quote = FALSE, sep = ",", row.names = FALSE)
-
-
-## Scattering Hourly Wage over Years facetting different Provinces
-
-q <- ggplot(lfsdat[!is.na(lfsdat$HourlyEarn),], aes(x = Year, y = HourlyEarn, color=Sex)) +
-        geom_jitter( position = position_jitter(width = .1))  + 
-        facet_wrap(~ Province)+
-        geom_line(stat = "summary", fun.y = "median", col = "black", lwd = 1)+
-        ggtitle("Hourly Wage over Time") + xlab("Year") 
-ggsave("WageTrendsProvinces.png")
 
 
 
-## Trend in Median Wage over Time facetting different Provinces
+## Apply the function above on all the data files
+setwd("LFSDATA/")   ## goes in the input directory to read and combine
+lfsRAW <- do.call("rbind", lapply(filenames,jFun))      
+setwd("..")         ## come back to the main directory
 
-lfstemp <- lfsdat[!is.na(lfsdat$HourlyEarn),]  ##get rid of NA cells
-
-MedianWage <- ddply(lfstemp, .(Year, Province), summarize,  MedWage = median(HourlyEarn))
-
-q <- ggplot(MedianWage, aes(x = Year, y = MedWage)) + 
-        facet_wrap(~Province)+ geom_point(cex = 1) +
-        geom_line(lwd=1, color="blue")+ 
-        geom_smooth(method = "lm", colour = "red",aes(group=1))+
-        ggtitle("Growth in Median Wage over Time for different Provinces")
-ggsave("MedianWageTrends.png")
+## Check that we have correctly read the data, there should be 17000 observations
+dim(lfsRAW)
 
 
+## Our main data from now on is called "lfsdat"
+lfsdat <- lfsRAW
 
 
-
-## Wage levels vs. Educational levels
-
-
-lfstemp <- lfsdat[!is.na(lfsdat$Educations),]   ## to get rid of NA parts
-lfstemp <- lfstemp[!is.na(lfstemp$HourlyEarn),] ## to get rid of NA parts
-
-lfstemp<- within(lfstemp, Province <- reorder(Province, HourlyEarn, min, order=TRUE))
-
-q <- ggplot(lfstemp, aes(x = Educations, y = HourlyEarn, fill = Province, order = -as.numeric(Province))) + 
-        geom_boxplot(alpha = 0.2) + 
-        theme(legend.position = "bottom") +  
-        xlab("Educational Levels") + ylab("Hourly Wage") +
-        ggtitle("Wage levels among Educational levels")
-
-ggsave("WageEducations.png")
+## For each variable of the data, we give some tidier attribute name
+## In this part we summarized some of the attributes, for example we 
+## count "widowed" people as sinle
+levels(lfsdat$MARSTAT) <- list(Married="Married or", Married= "Married", Single= "Single, ne", Single="Widowed", Separated= "Separated/",Separated= "Separated", Separated= "Divorced", Married= "Living in")
+levels(lfsdat$PROV) <- list(Alberta= "Alberta", BritishColumbia= "British Co",Manitoba="Manitoba",NewBrunswick= "New Brunsw", Newfoundland= "Newfoundla", NovaScotia="Nova Scoti", Ontario="Ontario", PrinceEdward="Prince Edw", Quebec="Québec" , Saskatchewan="Saskatchew")
+levels(lfsdat$EDUC90) <- list(A.EightYears= "0 to 8 yea", B.Secondary= "Some secon",C.Grade11to13= "Grade 11 t",D.PostSecondary="Post secon", D.PostSecondary= "Some post", E.University="University")
+levels(lfsdat$YABSENT) <- list(Vacation= "Vacation", FamilyResponsibility= "Personal o", OwnIllness= "Own illnes",Other= "Other")
 
 
+## Change the names of variables to a more meaningful one
+c <- c("Year", "Province", "Age", "Sex", "MaritalStatus", "Educations","JobType", "JobAbsence", "JobStatus", "WorkHours", "Tenure", "HourlyEarn", "Union", "Frequency")
+names(lfsdat) <- c
+
+### We rank the entities of the data based on some of the variables
+##  with most priority given to Year then Provinces and then Sex
+lfsdat = arrange(lfsdat, Year, Province, Sex)
 
 
-## Median Wages for different Educational levels
-
-lfstemp <- lfsdat[!is.na(lfsdat$HourlyEarn),]
-lfstemp<- within(lfstemp, Province <- reorder(Province, HourlyEarn, min, order=TRUE))
-
-MedianWage <- ddply(lfstemp, .(Educations, Sex), summarize,  MedWage = median(HourlyEarn))
-
-q <- ggplot(MedianWage, aes(x = Educations, y = MedWage,col=Sex))+geom_point(cex = 4)  +
-        geom_line(aes(group=Sex))+
-        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-        ggtitle("Median Wages for different Educational levels")
-ggsave("MedianWageEducations.png")
+### Check for the outliers 
+ggplot(lfsdat[!is.na(lfsdat$HourlyEarn),], aes(x = Province, y = HourlyEarn, color="orange")) + geom_jitter()
 
 
-
-## Wage for Different Ages
-
-lfstemp <- lfsdat[!is.na(lfsdat$Age),]  # to get rid of NA cells
-lfstemp <- lfstemp[!is.na(lfstemp$HourlyEarn),]
-
-lfstemp<- within(lfstemp, JobStatus <- reorder(JobStatus, HourlyEarn, max, order=TRUE))
-
-q <- ggplot(lfstemp, aes(x = Age, y= HourlyEarn, color = JobStatus, order= as.numeric(JobStatus))) + 
-       geom_jitter(position = position_jitter(width = .1)) + ylab("Hourly Wage") + 
-       ggtitle(" Wage for Different Ages") +
-       theme(axis.text.x = element_text(angle = 45)) + 
-       scale_fill_brewer("JobStatus", type = "qual", palette = 3)+
-       geom_smooth(method = "gam", formula = y ~ s(x), colour = "purple",aes(group=1)) 
-## raughly speaking geom_smooth adds a summary of the trend for the whole data  
-ggsave("WageOnAge.png")
+## Drop the outliers
+lfsdat <- droplevels(subset(lfsdat, Province != "Manitoba"))
 
 
-
-
-
-## Union Members in different Provinces
-
-lfstemp <- lfsdat[!is.na(lfsdat$Union),]
-lftemp<- within(lfstemp, Province <- reorder(Province, Union, length, order=TRUE))
-
-q <- ggplot(lfstemp,aes(x=Province, fill= Union)) +
-        geom_bar(position = "dodge")+facet_wrap(~Year)+
-        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-        ggtitle(" Union Members in different Provinces")+
-        coord_flip()  ## makes a horizontal barchart 
-ggsave("UnionMembersProvinces.png")
-
-
-
-
-
-## Hours of Work in a week across age groups
-
-lfstemp <- lfsdat[!is.na(lfsdat$WorkHours),]
-lfstemp <- lfstemp[!is.na(lfstemp$Age),]
-
-q <- ggplot(lfstemp, aes(x = Age, y = WorkHours)) +  facet_wrap(~Sex, ncol = 2) + geom_smooth(method = "gam", formula = y ~ s(x), colour = "purple",aes(group=1))+
-          theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-          ggtitle(" Hours of Work in a week across age groups")
-ggsave("WorkHoursAge.png")
-
-
-
-
-## Distribution of Employee Tenures
-
-lfstemp <- lfsdat[!is.na(lfsdat$Tenure),]
-lfstemp <- within(lfstemp, Province <- reorder(Province, Tenure, min, order=TRUE))
-
-q <- ggplot(lfstemp, aes(x = Tenure, color = Province))+
-        geom_density(lwd = 1)+
-        ggtitle("Distribution of Employee Tenures") 
-ggsave("TenureDistProvinces.png")
-
-
-
-## Hourly Wage for different Jobs
-
-lfstemp <- lfsdat[!is.na(lfsdat$HourlyEarn),]
-lfstemp <- within(lfstemp, JobType <- reorder(JobType, HourlyEarn, median, order=TRUE))
-
-q <- ggplot(lfstemp, aes(x = as.factor(JobType), y= HourlyEarn)) +
-        geom_boxplot(lwd = 1, trim= TRUE, color="brown")+theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
-        ggtitle("Hourly Wage for different Jobs") + xlab("Job Type") 
-ggsave("WagesOfJobs.png")
-
+## Write the final and clean data set to a human-readable file
+write.table(lfsdat, "lfsdat.csv", quote = FALSE, sep = ",", row.names = FALSE)
