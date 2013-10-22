@@ -1,6 +1,5 @@
 
 
-
 ## This is the main file for data analysis and making plots and tables
 
 
@@ -64,8 +63,7 @@ ggsave("ReasonOfJobAbsence.png")
 
 ## Distribution of Wage in Different Provinces
 
-lfstemp<- within(lfsdat[!is.na(lfsdat$HourlyEarn),], +
-               Province <- reorder(Province, HourlyEarn, min, order=TRUE))  ## reorder provinces based on the minimum of wages 
+lfstemp<- within(lfsdat[!is.na(lfsdat$HourlyEarn),], Province <- reorder(Province, HourlyEarn, min, order=TRUE))  ## reorder provinces based on the minimum of wages 
 
 q <- ggplot(lfstemp[!is.na(lfstemp$HourlyEarn),], aes(x = HourlyEarn, color = Province)) +
        geom_density(lwd = 1)+
