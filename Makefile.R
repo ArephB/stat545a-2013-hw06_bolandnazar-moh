@@ -1,11 +1,6 @@
 
 
 
-
-
-
-
-
 ## clean out any previous work
 outputs <- c("lfsdat.csv",               # the clean data
              "WageTrendRegression.csv",  # The Table built from the second script 
