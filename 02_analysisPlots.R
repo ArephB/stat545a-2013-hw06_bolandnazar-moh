@@ -64,8 +64,7 @@ ggsave("ReasonOfJobAbsence.png")
 
 ## Distribution of Wage in Different Provinces
 
-lfstemp<- within(lfsdat[!is.na(lfsdat$HourlyEarn),], +
-               Province <- reorder(Province, HourlyEarn, min, order=TRUE))  ## reorder provinces based on the minimum of wages 
+lfstemp<- within(lfsdat[!is.na(lfsdat$HourlyEarn),], Province <- reorder(Province, HourlyEarn, min, order=TRUE))  ## reorder provinces based on the minimum of wages 
 
 q <- ggplot(lfstemp[!is.na(lfstemp$HourlyEarn),], aes(x = HourlyEarn, color = Province)) +
        geom_density(lwd = 1)+
@@ -202,8 +201,6 @@ q <- ggplot(lfstemp,aes(x=Province, fill= Union)) +
         ggtitle(" Union Members in different Provinces")+
         coord_flip()  ## makes a horizontal barchart 
 ggsave("UnionMembersProvinces.png")
-
-
 
 
 
