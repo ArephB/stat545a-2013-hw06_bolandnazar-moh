@@ -1,7 +1,6 @@
 
 
 
-
 ## Loading the clean data
 
 path  <- "F:/stat545/stat545a-2013-hw06_bolandnazar-moh/lfsdat.csv"
